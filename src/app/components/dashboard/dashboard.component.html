@@ -1,0 +1,57 @@
+<div class="dashboard-container">
+    <div class="user-info">
+      <h2>Welcome, {{ currentUser?.name }}</h2>
+      <p>Role: {{ currentUser?.role }}</p>
+      <p>Last Login: {{ lastLoginTime | date:'medium' }}</p>
+      <button (click)="logout()">Logout</button>
+    </div>
+  
+    <div class="records-section">
+      <h3>Records</h3>
+      <div class="filters">
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="filterRecords()"
+          placeholder="Search records..."
+          class="search-input"
+        >
+        <select [(ngModel)]="sortBy" (change)="sortRecords()" class="sort-select">
+          <option value="title">Sort by Title</option>
+          <option value="id">Sort by ID</option>
+          <option value="userId">Sort by User ID</option>
+        </select>
+      </div>
+  
+      <div *ngIf="loading" class="loading">Loading records...</div>
+      <table *ngIf="!loading && filteredRecords.length">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>User ID</th>
+            <th *ngIf="isAdmin">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let record of filteredRecords">
+            <td>{{ record.id }}</td>
+            <td>{{ record.title }}</td>
+            <td>{{ record.description }}</td>
+            <td>{{ record.userId }}</td>
+            <td *ngIf="isAdmin">
+              <button 
+                (click)="deleteRecord(record.id)"
+                [disabled]="deletingId === record.id"
+                class="delete-btn"
+              >
+                {{ deletingId === record.id ? 'Deleting...' : 'Delete' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p *ngIf="!loading && !filteredRecords.length">No records found.</p>
+    </div>
+  </div>

@@ -4,95 +4,25 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { RecordsService } from '../../services/records.service';
 import { User, Record } from '../../models/user.model';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
-  template: `
-    <div class="dashboard-container">
-      <div class="user-info">
-        <h2>Welcome, {{ currentUser?.name }}</h2>
-        <p>Role: {{ currentUser?.role }}</p>
-        <button (click)="logout()">Logout</button>
-      </div>
-
-      <div class="records-section">
-        <h3>Records</h3>
-        <div *ngIf="loading" class="loading">Loading records...</div>
-        <table *ngIf="!loading && records.length">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Description</th>
-              <th>User ID</th>
-              <th *ngIf="isAdmin">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let record of records">
-              <td>{{ record.id }}</td>
-              <td>{{ record.title }}</td>
-              <td>{{ record.description }}</td>
-              <td>{{ record.userId }}</td>
-              <td *ngIf="isAdmin">
-                <button 
-                  (click)="deleteRecord(record.id)"
-                  [disabled]="deletingId === record.id"
-                  class="delete-btn"
-                >
-                  {{ deletingId === record.id ? 'Deleting...' : 'Delete' }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p *ngIf="!loading && !records.length">No records found.</p>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .dashboard-container {
-      padding: 20px;
-    }
-    .user-info {
-      margin-bottom: 20px;
-      padding: 20px;
-      background: #f5f5f5;
-      border-radius: 5px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 10px;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
-    th { background: #f5f5f5; }
-    .loading { padding: 20px; }
-    .delete-btn {
-      background-color: #dc3545;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .delete-btn:disabled {
-      background-color: #f1a3ab;
-      cursor: not-allowed;
-    }
-  `]
+  imports: [CommonModule, FormsModule],
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
   currentUser: User | null = null;
   records: Record[] = [];
+  filteredRecords: Record[] = [];
   loading = true;
   isAdmin = false;
   deletingId: number | null = null;
+  searchTerm = '';
+  sortBy = 'title';
+  lastLoginTime = new Date();
 
   constructor(
     private authService: AuthService,
@@ -104,6 +34,11 @@ export class DashboardComponent implements OnInit {
       this.router.navigate(['/login']);
     } else {
       this.isAdmin = this.currentUser.role === 'Admin';
+      const lastLogin = localStorage.getItem('lastLoginTime');
+      if (lastLogin) {
+        this.lastLoginTime = new Date(lastLogin);
+      }
+      localStorage.setItem('lastLoginTime', new Date().toISOString());
     }
   }
 
@@ -122,8 +57,29 @@ export class DashboardComponent implements OnInit {
       )
       .subscribe(records => {
         this.records = records;
+        this.filterRecords();
         this.loading = false;
       });
+  }
+
+  filterRecords() {
+    this.filteredRecords = this.records.filter(record =>
+      record.title.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+      record.description.toLowerCase().includes(this.searchTerm.toLowerCase())
+    );
+    this.sortRecords();
+  }
+
+  sortRecords() {
+    this.filteredRecords.sort((a, b) => {
+      if (this.sortBy === 'title') {
+        return a.title.localeCompare(b.title);
+      } else if (this.sortBy === 'id') {
+        return a.id - b.id;
+      } else {
+        return a.userId - b.userId;
+      }
+    });
   }
 
   deleteRecord(id: number) {
@@ -134,6 +90,7 @@ export class DashboardComponent implements OnInit {
       next: (success) => {
         if (success) {
           this.records = this.records.filter(record => record.id !== id);
+          this.filterRecords();
         }
         this.deletingId = null;
       },

@@ -35,6 +35,7 @@ export class DashboardComponent implements OnInit {
     } else {
       this.isAdmin = this.currentUser.role === 'Admin';
       const lastLogin = localStorage.getItem('lastLoginTime');
+      console.log(lastLogin);
       if (lastLogin) {
         this.lastLoginTime = new Date(lastLogin);
       }
